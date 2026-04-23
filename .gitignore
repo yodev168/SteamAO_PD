@@ -7,6 +7,13 @@ phase1/crawl_log.jsonl
 phase1/ao_apps_raw.csv
 phase1/ao_apps_deduped.csv
 
+# IDE / Editor
+.vscode/
+.idea/
+
+# Debug logs
+debug-*.log
+
 # Python
 __pycache__/
 *.pyc

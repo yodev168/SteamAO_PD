@@ -1,5 +1,5 @@
 """
-pages/1_Games.py — 遊戲清單（卡片網格 + 分頁）
+pages/1_Games.py — 遊戲清單（卡片 / 清單 雙模式）
 """
 import streamlit as st
 import pandas as pd
@@ -59,7 +59,7 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
-# Sidebar (mirrors app.py — re-render to keep sidebar visible on this page)
+# Sidebar
 # ---------------------------------------------------------------------------
 df_all = load_games()
 
@@ -74,32 +74,79 @@ search_query = st.sidebar.text_input(
 
 price_min_data = int(df_all["price_twd_original"].min(skipna=True))
 price_max_data = int(df_all["price_twd_original"].max(skipna=True))
-price_range = st.sidebar.slider(
-    "台幣售價區間（NT$）",
-    min_value=price_min_data,
-    max_value=price_max_data,
-    value=(price_min_data, price_max_data),
-    step=10,
-    key="price_range",
-)
+st.sidebar.markdown("**台幣售價區間（NT$）**")
+pc1, pc2 = st.sidebar.columns(2)
+price_low_text = pc1.text_input("最低", value=str(price_min_data), key="price_low_text")
+price_high_text = pc2.text_input("最高", value=str(price_max_data), key="price_high_text")
+try:
+    price_low = int(price_low_text.strip()) if price_low_text.strip() else price_min_data
+except ValueError:
+    price_low = price_min_data
+    st.sidebar.caption("最低價格式錯誤，已套用資料最小值。")
+try:
+    price_high = int(price_high_text.strip()) if price_high_text.strip() else price_max_data
+except ValueError:
+    price_high = price_max_data
+    st.sidebar.caption("最高價格式錯誤，已套用資料最大值。")
+price_low = max(0, min(price_low, price_max_data))
+price_high = max(0, min(price_high, price_max_data))
+if price_low > price_high:
+    price_low, price_high = price_high, price_low
+price_range = (price_low, price_high)
 
 all_zh_ratings = RATING_DISPLAY_ORDER + ["少量評論"]
-selected_ratings = st.sidebar.multiselect(
-    "評價等級",
-    options=all_zh_ratings,
-    default=all_zh_ratings,
-    key="selected_ratings",
-)
+if "selected_ratings" not in st.session_state:
+    st.session_state["selected_ratings"] = list(all_zh_ratings)
+with st.sidebar.popover(
+    f"評價等級（已選 {len(st.session_state['selected_ratings'])}/{len(all_zh_ratings)}）",
+    use_container_width=True,
+):
+    rb1, rb2 = st.columns(2)
+    if rb1.button("全選", key="rating_all", use_container_width=True):
+        st.session_state["selected_ratings"] = list(all_zh_ratings)
+        st.rerun()
+    if rb2.button("清除", key="rating_none", use_container_width=True):
+        st.session_state["selected_ratings"] = []
+        st.rerun()
+    new_ratings = []
+    for r in all_zh_ratings:
+        checked = st.checkbox(
+            r,
+            value=r in st.session_state["selected_ratings"],
+            key=f"rating_chk_{r}",
+        )
+        if checked:
+            new_ratings.append(r)
+    st.session_state["selected_ratings"] = new_ratings
+selected_ratings = st.session_state["selected_ratings"]
 
 only_reviewed = st.sidebar.checkbox("僅顯示有評論的遊戲", value=False, key="only_reviewed")
 
-all_years = sorted([y for y in df_all["release_year"].dropna().unique()], reverse=True)
-selected_years = st.sidebar.multiselect(
-    "發售年份",
-    options=[int(y) for y in all_years],
-    default=[int(y) for y in all_years],
-    key="selected_years",
-)
+all_years = sorted([int(y) for y in df_all["release_year"].dropna().unique()], reverse=True)
+if "selected_years" not in st.session_state:
+    st.session_state["selected_years"] = list(all_years[:5])
+with st.sidebar.popover(
+    f"發售年份（已選 {len(st.session_state['selected_years'])}/{len(all_years)}）",
+    use_container_width=True,
+):
+    yb1, yb2 = st.columns(2)
+    if yb1.button("全選", key="year_all", use_container_width=True):
+        st.session_state["selected_years"] = list(all_years)
+        st.rerun()
+    if yb2.button("清除", key="year_none", use_container_width=True):
+        st.session_state["selected_years"] = []
+        st.rerun()
+    new_years = []
+    for y in all_years:
+        checked = st.checkbox(
+            str(y),
+            value=y in st.session_state["selected_years"],
+            key=f"year_chk_{y}",
+        )
+        if checked:
+            new_years.append(y)
+    st.session_state["selected_years"] = new_years
+selected_years = st.session_state["selected_years"]
 
 sort_label = st.sidebar.selectbox(
     "排序方式",
@@ -140,8 +187,50 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
 df = apply_filters(df_all)
 
 # ---------------------------------------------------------------------------
-# Rating badge helper
+# Header + 模式切換
 # ---------------------------------------------------------------------------
+st.title("遊戲清單")
+
+hcol1, hcol2 = st.columns([6, 2])
+with hcol1:
+    st.markdown(f"篩選結果：**{len(df):,}** 款遊戲")
+with hcol2:
+    view_mode = st.radio(
+        "顯示模式",
+        options=["🃏 卡片", "📋 清單"],
+        horizontal=True,
+        key="view_mode",
+        label_visibility="collapsed",
+    )
+
+total = len(df)
+if total == 0:
+    st.warning("沒有符合條件的遊戲，請調整篩選條件。")
+    st.stop()
+
+# ---------------------------------------------------------------------------
+# Pagination（卡片 30 筆 / 清單 50 筆）
+# ---------------------------------------------------------------------------
+PER_PAGE = 30 if view_mode == "🃏 卡片" else 50
+total_pages = max(1, (total + PER_PAGE - 1) // PER_PAGE)
+
+if "games_page" not in st.session_state:
+    st.session_state["games_page"] = 1
+
+prev_total = st.session_state.get("games_prev_total", -1)
+if prev_total != total:
+    st.session_state["games_page"] = 1
+    st.session_state["games_prev_total"] = total
+
+current_page = st.session_state["games_page"]
+
+start = (current_page - 1) * PER_PAGE
+end   = min(start + PER_PAGE, total)
+page_df = df.iloc[start:end]
+
+# ===========================================================================
+# 卡片模式
+# ===========================================================================
 POSITIVE_LABELS = {"壓倒性好評", "極度好評", "大多好評", "好評"}
 NEGATIVE_LABELS = {"大多負評", "負評", "極度負評"}
 
@@ -158,139 +247,222 @@ def rating_badge(zh_label: str) -> str:
     return f'<span class="badge {cls}">{zh_label}</span>'
 
 
-# ---------------------------------------------------------------------------
-# Pagination
-# ---------------------------------------------------------------------------
-PER_PAGE = 30
-total = len(df)
-total_pages = max(1, (total + PER_PAGE - 1) // PER_PAGE)
+if view_mode == "🃏 卡片":
+    COLS = 3
+    for row_start in range(0, len(page_df), COLS):
+        cols = st.columns(COLS)
+        for ci, col in enumerate(cols):
+            idx = row_start + ci
+            if idx >= len(page_df):
+                break
+            row = page_df.iloc[idx]
 
-if "games_page" not in st.session_state:
-    st.session_state["games_page"] = 1
+            with col:
+                # 縮圖
+                img_url = str(row.get("header_image", "") or "").strip()
+                if img_url and img_url != "nan":
+                    st.image(img_url, use_container_width=True)
+                else:
+                    st.html(
+                        '<div style="height:120px;background:#1a1a2e;border-radius:6px;'
+                        'display:flex;align-items:center;justify-content:center;'
+                        'color:#555;font-size:0.8rem;">無宣傳圖</div>'
+                    )
 
-# Reset to page 1 when filters change (detect via total count change)
-prev_total = st.session_state.get("games_prev_total", -1)
-if prev_total != total:
-    st.session_state["games_page"] = 1
-    st.session_state["games_prev_total"] = total
+                # 評論資料
+                rc        = fmt_num(row.get("review_count"))
+                rp        = fmt_num(row.get("review_positive"))
+                rn        = fmt_num(row.get("review_negative"))
+                ratio_raw = row.get("positive_ratio")
+                try:
+                    ratio_str = f"{float(ratio_raw) * 100:.1f}%"
+                except (TypeError, ValueError):
+                    ratio_str = "—"
 
-current_page = st.session_state["games_page"]
+                url      = steam_url(str(row["appid"]))
+                name     = str(row.get("name") or "—")
+                zh_rating = str(row.get("review_score_desc_zh") or "—")
+                badge_html = rating_badge(zh_rating)
+                twd      = fmt_twd(row.get("price_twd_original"))
+                usd_raw  = row.get("price_usd_original")
+                try:
+                    usd_str = f"US$ {float(usd_raw):.2f}"
+                except (TypeError, ValueError):
+                    usd_str = ""
+                rd       = row.get("release_date")
+                rd_str   = pd.Timestamp(rd).strftime("%Y-%m-%d") if pd.notna(rd) else "—"
+                dev      = display_value(row.get("developer"))
+                pub      = display_value(row.get("publisher"))
+                est      = fmt_num(row.get("est_sales_low"))
 
-# ---------------------------------------------------------------------------
-# Header
-# ---------------------------------------------------------------------------
-st.title("遊戲清單")
-st.markdown(f"篩選結果：**{total:,}** 款遊戲")
+                usd_part = f'&nbsp;&nbsp;<span style="color:#888;font-size:0.80rem;">{usd_str}</span>' if usd_str else ""
 
-if total == 0:
-    st.warning("沒有符合條件的遊戲，請調整篩選條件。")
-    st.stop()
+                st.html(f"""
+                <div style="padding:2px 0 8px 0;">
+                  <div style="font-size:0.95rem;font-weight:700;line-height:1.4;margin-bottom:4px;">
+                    <a href="{url}" target="_blank"
+                       style="color:#c6d4df;text-decoration:none;">{name}</a>
+                  </div>
+                  <div style="margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    {badge_html}
+                    <span style="color:#aaa;font-size:0.80rem;">
+                      {rc} 則 &nbsp;
+                      <span style="color:#5cb85c;">▲ {rp}</span>&nbsp;
+                      <span style="color:#d9534f;">▼ {rn}</span>&nbsp;
+                      好評率 {ratio_str}
+                    </span>
+                  </div>
+                  <div style="font-size:0.95rem;font-weight:600;margin-bottom:2px;">
+                    {twd}{usd_part}
+                  </div>
+                  <div style="color:#888;font-size:0.80rem;margin-bottom:2px;">發售日：{rd_str}</div>
+                  <div style="color:#888;font-size:0.80rem;margin-bottom:2px;">開發：{dev}</div>
+                  <div style="color:#888;font-size:0.80rem;margin-bottom:6px;">發行：{pub}</div>
+                  <div style="font-size:0.82rem;margin-bottom:6px;">
+                    <span style="color:#888;">預測銷售：</span>
+                    <span style="font-weight:600;">{est} 套</span>
+                  </div>
+                  <a href="{url}" target="_blank"
+                     style="display:inline-block;padding:3px 10px;background:#1b2838;
+                            color:#c6d4df;border-radius:4px;text-decoration:none;
+                            font-size:0.80rem;">在 Steam 開啟 ↗</a>
+                  <hr style="margin:12px 0;border:none;border-top:1px solid #333;">
+                </div>
+                """)
 
-# ---------------------------------------------------------------------------
-# Page slice
-# ---------------------------------------------------------------------------
-start = (current_page - 1) * PER_PAGE
-end   = min(start + PER_PAGE, total)
-page_df = df.iloc[start:end]
+# ===========================================================================
+# 清單模式（HTML table，支援評論等級字體顏色）
+# ===========================================================================
+else:
+    # Steam 配色：參考 Steam 評論顏色體系
+    RATING_COLOR: dict[str, str] = {
+        "壓倒性好評": "#4ade80",   # 亮綠（Overwhelmingly Positive）
+        "極度好評":   "#4db366",   # 中綠（Very Positive）
+        "大多好評":   "#66c0f4",   # Steam 藍綠（Mostly Positive）
+        "好評":       "#66c0f4",   # Steam 藍綠（Positive）
+        "褒貶不一":   "#b9a074",   # 黃褐（Mixed）
+        "大多負評":   "#c0392b",   # 紅（Mostly Negative）
+        "負評":       "#c0392b",   # 紅（Negative）
+        "極度負評":   "#8b1a1a",   # 深紅（Overwhelmingly Negative）
+        "少量評論":   "#888888",   # 灰
+        "尚無評論":   "#888888",   # 灰
+    }
 
-# ---------------------------------------------------------------------------
-# Card grid (3 columns)
-# ---------------------------------------------------------------------------
-COLS = 3
+    def _rating_text(r) -> tuple[str, str]:
+        """Return (display_text, css_color)."""
+        rating = str(r.get("review_score_desc_zh") or "—")
+        color  = RATING_COLOR.get(rating, "#888888")
+        count  = r.get("review_count")
+        ratio  = r.get("positive_ratio")
+        try:
+            if pd.isna(count) or int(count) == 0:
+                return rating, color
+        except (TypeError, ValueError):
+            return rating, color
+        ratio_s = f"{float(ratio) * 100:.1f}%" if pd.notna(ratio) else "—"
+        text = f"{rating} · {int(count):,} 則 ({ratio_s})"
+        return text, color
 
-rows_iter = range(0, len(page_df), COLS)
-for row_start in rows_iter:
-    cols = st.columns(COLS)
-    for ci, col in enumerate(cols):
-        idx = row_start + ci
-        if idx >= len(page_df):
-            break
-        row = page_df.iloc[idx]
+    def _fmt_price(val) -> str:
+        try:
+            v = int(val)
+            return f"NT$ {v:,}"
+        except (TypeError, ValueError):
+            return "—"
 
-        with col:
-            # Promo image
-            img_url = str(row.get("header_image", "") or "").strip()
-            if img_url and img_url != "nan":
-                st.image(img_url, use_container_width=True)
-            else:
-                st.markdown(
-                    '<div style="height:120px;background:#1a1a2e;border-radius:6px;'
-                    'display:flex;align-items:center;justify-content:center;'
-                    'color:#555;font-size:0.8rem;">無宣傳圖</div>',
-                    unsafe_allow_html=True,
-                )
+    def _fmt_sales(val) -> str:
+        try:
+            return f"{int(val):,} 套"
+        except (TypeError, ValueError):
+            return "—"
 
-            # Name + Steam link
-            url = steam_url(str(row["appid"]))
-            name = str(row["name"])
-            st.markdown(
-                f'<div class="game-title">'
-                f'<a href="{url}" target="_blank" style="text-decoration:none;">'
-                f'{name}</a></div>',
-                unsafe_allow_html=True,
-            )
+    def _fmt_date(val) -> str:
+        try:
+            return pd.Timestamp(val).strftime("%Y-%m-%d") if pd.notna(val) else "—"
+        except Exception:
+            return "—"
 
-            # Rating badge
-            zh_rating = str(row.get("review_score_desc_zh", "—"))
-            st.markdown(rating_badge(zh_rating), unsafe_allow_html=True)
+    # Build HTML table
+    rows_html = []
+    for _, r in page_df.iterrows():
+        img_url  = str(r.get("header_image") or "").strip()
+        img_tag  = (
+            f'<img src="{img_url}" style="height:48px;width:auto;border-radius:3px;'
+            f'vertical-align:middle;">'
+            if img_url and img_url != "nan"
+            else '<span style="color:#555;font-size:0.75rem;">無圖</span>'
+        )
+        url      = steam_url(str(r["appid"]))
+        name     = str(r.get("name") or "—")
+        r_text, r_color = _rating_text(r)
+        price    = _fmt_price(r.get("price_twd_original"))
+        date_s   = _fmt_date(r.get("release_date"))
+        sales    = _fmt_sales(r.get("est_sales_low"))
 
-            # Price row
-            twd = fmt_twd(row.get("price_twd_original"))
-            usd = fmt_usd(row.get("price_usd_original"))
-            st.markdown(
-                f'<span style="font-size:0.95rem;font-weight:600;">{twd}</span>'
-                f'&nbsp;&nbsp;<span class="muted">{usd}</span>',
-                unsafe_allow_html=True,
-            )
+        rows_html.append(f"""
+        <tr>
+          <td style="width:80px;text-align:center;padding:6px 8px;vertical-align:middle;">
+            <a href="{url}" target="_blank">{img_tag}</a>
+          </td>
+          <td style="padding:6px 8px;vertical-align:middle;font-size:0.88rem;font-weight:600;max-width:220px;">
+            <a href="{url}" target="_blank"
+               style="color:#c6d4df;text-decoration:none;"
+               onmouseover="this.style.textDecoration='underline'"
+               onmouseout="this.style.textDecoration='none'">{name}</a>
+          </td>
+          <td style="padding:6px 8px;vertical-align:middle;font-size:0.82rem;
+                     color:{r_color};font-weight:600;max-width:280px;">{r_text}</td>
+          <td style="padding:6px 8px;vertical-align:middle;font-size:0.85rem;
+                     white-space:nowrap;">{price}</td>
+          <td style="padding:6px 8px;vertical-align:middle;font-size:0.82rem;
+                     color:#aaa;white-space:nowrap;">{date_s}</td>
+          <td style="padding:6px 8px;vertical-align:middle;font-size:0.82rem;
+                     white-space:nowrap;">{sales}</td>
+        </tr>""")
 
-            # Release date
-            rd = row.get("release_date")
-            rd_str = pd.Timestamp(rd).strftime("%Y-%m-%d") if pd.notna(rd) else "—"
-            st.markdown(f'<span class="muted">發售日：{rd_str}</span>', unsafe_allow_html=True)
+    table_html = f"""
+    <style>
+    .game-list-table {{
+        width: 100%;
+        border-collapse: collapse;
+        font-family: inherit;
+    }}
+    .game-list-table th {{
+        background: #1e2a3a;
+        color: #8ba3bc;
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 8px 8px;
+        text-align: left;
+        border-bottom: 1px solid #2a3f55;
+    }}
+    .game-list-table td {{
+        border-bottom: 1px solid #1e2a3a;
+    }}
+    .game-list-table tr:hover td {{
+        background: #1a2535;
+    }}
+    </style>
+    <table class="game-list-table">
+      <thead>
+        <tr>
+          <th>縮圖</th>
+          <th>名稱</th>
+          <th>評論等級 / 評論數</th>
+          <th>台幣售價</th>
+          <th>發售日</th>
+          <th>預測銷售</th>
+        </tr>
+      </thead>
+      <tbody>
+        {"".join(rows_html)}
+      </tbody>
+    </table>
+    """
 
-            # Developer / Publisher
-            dev = display_value(row.get("developer"))
-            pub = display_value(row.get("publisher"))
-            st.markdown(
-                f'<span class="muted">開發：{dev}</span><br>'
-                f'<span class="muted">發行：{pub}</span>',
-                unsafe_allow_html=True,
-            )
-
-            # Reviews
-            rc  = fmt_num(row.get("review_count"))
-            rp  = fmt_num(row.get("review_positive"))
-            rn  = fmt_num(row.get("review_negative"))
-            ratio_raw = row.get("positive_ratio")
-            try:
-                ratio_str = f"{float(ratio_raw)*100:.1f}%"
-            except (TypeError, ValueError):
-                ratio_str = "—"
-
-            st.markdown(
-                f'<span class="muted">'
-                f'評論：{rc} 則 &nbsp;|&nbsp; '
-                f'<span style="color:#5cb85c;">▲ {rp}</span> &nbsp;'
-                f'<span style="color:#d9534f;">▼ {rn}</span> &nbsp;'
-                f'好評率 {ratio_str}</span>',
-                unsafe_allow_html=True,
-            )
-
-            # Est. sales
-            est = fmt_num(row.get("est_sales_low"))
-            st.markdown(
-                f'<span class="muted">預測銷售：</span>'
-                f'<span style="font-weight:600;">{est} 套</span>',
-                unsafe_allow_html=True,
-            )
-
-            # Steam open button
-            st.markdown(
-                f'<div class="steam-link"><a href="{url}" target="_blank">在 Steam 開啟 ↗</a></div>',
-                unsafe_allow_html=True,
-            )
-
-            st.markdown("<hr style='margin:12px 0;border-color:#333;'>", unsafe_allow_html=True)
+    st.html(table_html)
 
 # ---------------------------------------------------------------------------
 # Pagination controls
