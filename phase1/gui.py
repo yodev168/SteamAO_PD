@@ -104,7 +104,7 @@ class CrawlerGUI:
             text="Steam AO 爬蟲  //  第一階段",
             bg=HEADER_BG,
             fg=ACCENT,
-            font=("微軟正黑體", 13, "bold"),
+            font=("Microsoft JhengHei UI", 13, "bold"),
         )
         title.pack(side="left")
 
@@ -117,7 +117,7 @@ class CrawlerGUI:
             text="Cookie：檢查中...",
             bg=HEADER_BG,
             fg=FG,
-            font=("微軟正黑體", 10),
+            font=("Microsoft JhengHei UI", 10),
             padx=8,
         )
         self.cookie_label.pack(side="left")
@@ -130,7 +130,7 @@ class CrawlerGUI:
         frame.pack(fill="x")
 
         tk.Label(frame, text="執行步驟：", bg=BG, fg=GRAY,
-                 font=("微軟正黑體", 9)).pack(side="left", padx=(0, 6))
+                 font=("Microsoft JhengHei UI", 9)).pack(side="left", padx=(0, 6))
 
         self._btn(frame, "1. 爬取資料",
                   lambda: self._run_script("crawl_search.py"), side="left", padx=4)
@@ -151,7 +151,7 @@ class CrawlerGUI:
         frame.pack(fill="x")
 
         tk.Label(frame, text="進度：", bg=BG, fg=GRAY,
-                 font=("微軟正黑體", 9)).pack(side="left", padx=(0, 6))
+                 font=("Microsoft JhengHei UI", 9)).pack(side="left", padx=(0, 6))
 
         style = ttk.Style()
         style.theme_use("default")
@@ -174,19 +174,19 @@ class CrawlerGUI:
         self.progress.pack(side="left", padx=(0, 10))
 
         self.progress_label = tk.Label(
-            frame, text="— / —", bg=BG, fg=FG, font=("微軟正黑體", 9)
+            frame, text="— / —", bg=BG, fg=FG, font=("Microsoft JhengHei UI", 9)
         )
         self.progress_label.pack(side="left")
 
         self.status_label = tk.Label(
-            frame, text="", bg=BG, fg=GRAY, font=("微軟正黑體", 9)
+            frame, text="", bg=BG, fg=GRAY, font=("Microsoft JhengHei UI", 9)
         )
         self.status_label.pack(side="left", padx=10)
 
     def _build_log(self) -> None:
         lframe = tk.LabelFrame(
             self.root, text="執行紀錄", bg=BG, fg=GRAY,
-            font=("微軟正黑體", 9), padx=4, pady=4,
+            font=("Microsoft JhengHei UI", 9), padx=4, pady=4,
         )
         lframe.pack(fill="both", expand=True, padx=10, pady=(4, 2))
 
@@ -212,7 +212,7 @@ class CrawlerGUI:
     def _build_preview(self) -> None:
         pframe = tk.LabelFrame(
             self.root, text="資料預覽  (ao_apps_deduped.csv)",
-            bg=BG, fg=GRAY, font=("微軟正黑體", 9), padx=4, pady=4,
+            bg=BG, fg=GRAY, font=("Microsoft JhengHei UI", 9), padx=4, pady=4,
         )
         pframe.pack(fill="x", padx=10, pady=(2, 6))
 
@@ -229,8 +229,8 @@ class CrawlerGUI:
             background="#11111b",
             foreground=FG,
             fieldbackground="#11111b",
-            rowheight=20,
-            font=("Consolas", 8),
+            rowheight=22,
+            font=("Microsoft JhengHei UI", 9),
         )
         style.configure("AO.Treeview.Heading",
                          background=BTN_BG, foreground=ACCENT,
@@ -260,7 +260,7 @@ class CrawlerGUI:
 
         self.preview_status = tk.Label(
             footer, text="（尚未生成）", bg=BG, fg=GRAY,
-            font=("微軟正黑體", 8)
+            font=("Microsoft JhengHei UI", 8)
         )
         self.preview_status.pack(side="left")
 
@@ -518,7 +518,7 @@ class CrawlerGUI:
             activebackground=BTN_ACTIVE,
             activeforeground=FG,
             relief="flat",
-            font=("微軟正黑體", 9),
+            font=("Microsoft JhengHei UI", 9),
             padx=8,
             pady=3,
             cursor="hand2",
@@ -532,9 +532,8 @@ class CrawlerGUI:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    root = tk.Tk()
-    app = CrawlerGUI(root)
-    root.mainloop()
+    from gui_phase12 import main as phase12_main
+    phase12_main()
 
 
 if __name__ == "__main__":
