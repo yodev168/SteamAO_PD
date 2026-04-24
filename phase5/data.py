@@ -63,7 +63,8 @@ def load_games() -> pd.DataFrame:
     # Numeric columns
     for col in ["price_twd_original", "price_usd_original",
                 "review_count", "review_positive", "review_negative",
-                "review_score", "positive_ratio", "est_sales_low"]:
+                "review_score", "positive_ratio", "est_sales_low",
+                "lowest_discount_percent", "lowest_price_twd"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 

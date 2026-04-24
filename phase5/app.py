@@ -213,7 +213,7 @@ st.title("Steam AO 市場分析 Dashboard")
 st.markdown(
     f"目前篩選結果：**{len(df_filtered):,}** 款遊戲（共 {len(df_all):,} 款）"
 )
-st.info("請使用左側導覽選擇頁面：\n- **1 Games** — 遊戲清單\n- **2 Release Heatmap** — 發售熱度分析\n- **3 Reviews** — 評論分析")
+st.info("請使用左側導覽選擇頁面：\n- **1 Games** — 遊戲清單\n- **2 Release Heatmap** — 發售熱度分析\n- **3 Reviews** — 評論分析\n- **4 Price Bands** — 價格區間分析")
 
 # Quick summary metrics
 c1, c2, c3, c4 = st.columns(4)

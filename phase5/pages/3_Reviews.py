@@ -1,7 +1,7 @@
 """
 pages/3_Reviews.py — 評論分析
 KPI 列 + 圓餅圖 + 水平長條圖 + 好評率直方圖 + 評論數直方圖
-+ 散佈圖 + 售價分組長條圖 + 年度堆疊長條圖
++ 售價分組長條圖 + 年度堆疊長條圖
 """
 import altair as alt
 import pandas as pd
@@ -238,89 +238,85 @@ pie_df["sort_order"] = pie_df["review_score_desc_zh"].apply(
     lambda x: domain.index(x) if x in domain else 999
 )
 
-col_pie, col_bar = st.columns([1, 1])
-
-with col_pie:
-    st.caption("圓餅圖（各等級遊戲佔比）")
-    pie_chart = (
-        alt.Chart(pie_df)
-        .mark_arc(outerRadius=130, innerRadius=50)
-        .encode(
-            theta=alt.Theta("count:Q"),
-            color=alt.Color(
-                "review_score_desc_zh:N",
-                scale=color_scale,
-                sort=domain,
-                legend=alt.Legend(
-                    title="評論等級",
-                    orient="bottom",
-                    columns=2,
-                    labelFontSize=11,
-                ),
+st.caption("圓餅圖（各等級遊戲佔比）")
+pie_chart = (
+    alt.Chart(pie_df)
+    .mark_arc(outerRadius=130, innerRadius=50)
+    .encode(
+        theta=alt.Theta("count:Q"),
+        color=alt.Color(
+            "review_score_desc_zh:N",
+            scale=color_scale,
+            sort=domain,
+            legend=alt.Legend(
+                title="評論等級",
+                orient="right",
+                labelFontSize=12,
             ),
-            order=alt.Order("sort_order:Q", sort="ascending"),
-            tooltip=[
-                alt.Tooltip("review_score_desc_zh:N", title="評論等級"),
-                alt.Tooltip("count:Q",               title="遊戲數",   format=","),
-                alt.Tooltip("pct_label:N",            title="佔比"),
-                alt.Tooltip("avg_reviews:Q",          title="平均評論數", format=",.0f"),
-            ],
-        )
-        .properties(height=360)
+        ),
+        order=alt.Order("sort_order:Q", sort="ascending"),
+        tooltip=[
+            alt.Tooltip("review_score_desc_zh:N", title="評論等級"),
+            alt.Tooltip("count:Q",               title="遊戲數",   format=","),
+            alt.Tooltip("pct_label:N",            title="佔比"),
+            alt.Tooltip("avg_reviews:Q",          title="平均評論數", format=",.0f"),
+        ],
     )
-    st.altair_chart(pie_chart, use_container_width=True)
+    .properties(height=380)
+    .configure_view(strokeWidth=0)
+)
+st.altair_chart(pie_chart, use_container_width=True)
 
-with col_bar:
-    st.caption("水平長條圖（各等級遊戲數量 / 平均評論數）")
+st.caption("水平長條圖（各等級遊戲數量 / 平均評論數）")
 
-    bar_df = pie_df.copy()
-    bar_df["rating_sort"] = bar_df["review_score_desc_zh"].apply(
-        lambda x: domain.index(x) if x in domain else 999
+bar_df = pie_df.copy()
+bar_df["rating_sort"] = bar_df["review_score_desc_zh"].apply(
+    lambda x: domain.index(x) if x in domain else 999
+)
+bar_df = bar_df.sort_values("rating_sort")
+
+base = alt.Chart(bar_df)
+
+bar_count = (
+    base.mark_bar(cornerRadiusTopRight=3, cornerRadiusBottomRight=3)
+    .encode(
+        y=alt.Y(
+            "review_score_desc_zh:N",
+            sort=domain,
+            title=None,
+            axis=alt.Axis(labelFontSize=12),
+        ),
+        x=alt.X("count:Q", title="遊戲數量"),
+        color=alt.Color(
+            "review_score_desc_zh:N",
+            scale=color_scale,
+            sort=domain,
+            legend=None,
+        ),
+        tooltip=[
+            alt.Tooltip("review_score_desc_zh:N", title="評論等級"),
+            alt.Tooltip("count:Q",               title="遊戲數",   format=","),
+            alt.Tooltip("avg_reviews:Q",          title="平均評論數", format=",.0f"),
+        ],
     )
-    bar_df = bar_df.sort_values("rating_sort")
+    .properties(height=320)
+)
 
-    base = alt.Chart(bar_df)
-
-    bar_count = (
-        base.mark_bar(cornerRadiusTopRight=3, cornerRadiusBottomRight=3)
-        .encode(
-            y=alt.Y(
-                "review_score_desc_zh:N",
-                sort=domain,
-                title=None,
-                axis=alt.Axis(labelFontSize=12),
-            ),
-            x=alt.X("count:Q", title="遊戲數量"),
-            color=alt.Color(
-                "review_score_desc_zh:N",
-                scale=color_scale,
-                sort=domain,
-                legend=None,
-            ),
-            tooltip=[
-                alt.Tooltip("review_score_desc_zh:N", title="評論等級"),
-                alt.Tooltip("count:Q",               title="遊戲數",   format=","),
-                alt.Tooltip("avg_reviews:Q",          title="平均評論數", format=",.0f"),
-            ],
-        )
-        .properties(height=320)
+text_count = (
+    base.mark_text(align="left", dx=4, fontSize=11, color="#555")
+    .encode(
+        y=alt.Y("review_score_desc_zh:N", sort=domain),
+        x=alt.X("count:Q"),
+        text=alt.Text("count:Q", format=","),
     )
+)
 
-    text_count = (
-        base.mark_text(align="left", dx=4, fontSize=11, color="#555")
-        .encode(
-            y=alt.Y("review_score_desc_zh:N", sort=domain),
-            x=alt.X("count:Q"),
-            text=alt.Text("count:Q", format=","),
-        )
-    )
-
-    st.altair_chart(
-        (bar_count + text_count)
-        .configure_axis(labelFontSize=12, titleFontSize=12)
-        .configure_view(strokeWidth=0),
-        use_container_width=True,
-    )
+st.altair_chart(
+    (bar_count + text_count)
+    .configure_axis(labelFontSize=12, titleFontSize=12)
+    .configure_view(strokeWidth=0),
+    use_container_width=True,
+)
 
 st.markdown("---")
 
@@ -429,65 +425,7 @@ if len(df_rev) > 0:
 st.markdown("---")
 
 # ---------------------------------------------------------------------------
-# 6. 好評率 vs 評論數量 散佈圖
-# ---------------------------------------------------------------------------
-st.subheader("好評率 vs 評論數量")
-st.caption("每個點為一款遊戲；X 軸使用對數刻度；顏色對應評論等級")
-
-if len(df_rev) > 0:
-    scatter_df = df_rev[
-        df_rev["review_count"] > 0
-    ][["name", "review_count", "positive_ratio",
-       "review_score_desc_zh", "est_sales_low",
-       "price_twd_original"]].dropna(subset=["review_count", "positive_ratio"]).copy()
-
-    sc_domain, sc_range = _rating_scale(scatter_df["review_score_desc_zh"].unique().tolist())
-
-    scatter = (
-        alt.Chart(scatter_df)
-        .mark_circle(opacity=0.65, size=50)
-        .encode(
-            x=alt.X(
-                "review_count:Q",
-                scale=alt.Scale(type="log"),
-                title="評論數量（對數刻度）",
-                axis=alt.Axis(format=","),
-            ),
-            y=alt.Y(
-                "positive_ratio:Q",
-                title="好評率",
-                axis=alt.Axis(format=".0%"),
-                scale=alt.Scale(domain=[0, 1]),
-            ),
-            color=alt.Color(
-                "review_score_desc_zh:N",
-                scale=alt.Scale(domain=sc_domain, range=sc_range),
-                sort=sc_domain,
-                legend=alt.Legend(
-                    title="評論等級",
-                    orient="right",
-                    labelFontSize=11,
-                ),
-            ),
-            tooltip=[
-                alt.Tooltip("name:N",                 title="遊戲名稱"),
-                alt.Tooltip("review_count:Q",         title="評論數",   format=","),
-                alt.Tooltip("positive_ratio:Q",       title="好評率",   format=".1%"),
-                alt.Tooltip("review_score_desc_zh:N", title="評論等級"),
-                alt.Tooltip("est_sales_low:Q",        title="預測銷售", format=","),
-                alt.Tooltip("price_twd_original:Q",   title="台幣售價", format=","),
-            ],
-        )
-        .properties(height=380)
-        .configure_axis(labelFontSize=12, titleFontSize=12)
-        .configure_view(strokeWidth=0)
-    )
-    st.altair_chart(scatter, use_container_width=True)
-
-st.markdown("---")
-
-# ---------------------------------------------------------------------------
-# 7. 評論等級 vs 平均售價
+# 6. 評論等級 vs 平均售價
 # ---------------------------------------------------------------------------
 st.subheader("各評論等級的平均售價")
 st.caption("觀察好評 / 差評遊戲是否有定價差異（僅限付費遊戲）")
@@ -539,7 +477,7 @@ else:
 st.markdown("---")
 
 # ---------------------------------------------------------------------------
-# 8. 年度評論等級堆疊長條圖
+# 7. 年度評論等級堆疊長條圖
 # ---------------------------------------------------------------------------
 st.subheader("各年度評論等級組成")
 st.caption("觀察每年 AO 遊戲的評論等級分布變化")
@@ -560,13 +498,17 @@ yearly_df["sort_order"] = yearly_df["review_score_desc_zh"].apply(
     lambda x: yr_domain.index(x) if x in yr_domain else 999
 )
 
+# 明確依數值年份排序（避免 SortField 在堆疊圖上解析異常導致年份亂序）
+_years_chrono = sorted(yearly_df["release_year"].unique().tolist())
+_years_chrono_str = [str(int(y)) for y in _years_chrono]
+
 stacked_bar = (
     alt.Chart(yearly_df)
     .mark_bar()
     .encode(
         x=alt.X(
             "year_str:N",
-            sort=alt.SortField("release_year", order="ascending"),
+            sort=_years_chrono_str,
             title="年份",
             axis=alt.Axis(labelAngle=0),
         ),

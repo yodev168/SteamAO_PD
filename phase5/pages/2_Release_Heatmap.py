@@ -10,6 +10,7 @@ from pathlib import Path
 import altair as alt
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as _components
 
 from data import (
     load_games,
@@ -184,6 +185,80 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
 
 
 df = apply_filters(df_all)
+
+
+# ---------------------------------------------------------------------------
+# 共用：可排序 HTML 表格（JS client-side sort，不改任何 td 樣式）
+# ---------------------------------------------------------------------------
+def _make_sortable_table(
+    rows_html: list[str],
+    table_id: str,
+    columns: list[tuple[str, str]],
+) -> str:
+    th_parts = []
+    for i, (label, stype) in enumerate(columns):
+        if stype == "none":
+            th_parts.append(f'<th data-sort="none" style="{_TH_BASE_STYLE}">{label}</th>')
+        else:
+            th_parts.append(
+                f'<th data-sort="{stype}" data-col="{i}" data-dir="none" '
+                f'style="{_TH_BASE_STYLE}cursor:pointer;user-select:none;" '
+                f'onclick="sortTable(\'{table_id}\',{i},this)">'
+                f'{label} <span class="sort-arrow" style="opacity:0.5;font-size:0.7em;">⇅</span></th>'
+            )
+    thead_html = "<tr>" + "".join(th_parts) + "</tr>"
+    return f"""
+<style>
+#{table_id} {{ width:100%;border-collapse:collapse;font-family:inherit; }}
+#{table_id} th {{ background:#1e2a3a;color:#8ba3bc;font-size:0.78rem;font-weight:600;
+    text-transform:uppercase;letter-spacing:0.05em;padding:8px;text-align:left;
+    border-bottom:1px solid #2a3f55; }}
+#{table_id} td {{ border-bottom:1px solid #1e2a3a; }}
+#{table_id} tr:hover td {{ background:#f3f5f7; }}
+</style>
+{_SORT_JS}
+<table id="{table_id}">
+  <thead>{thead_html}</thead>
+  <tbody>{"".join(rows_html)}</tbody>
+</table>
+"""
+
+_TH_BASE_STYLE = ""
+_SORT_JS = """
+<script>
+function sortTable(tableId,colIdx,th){
+  var table=document.getElementById(tableId);
+  var tbody=table.querySelector('tbody');
+  var rows=Array.from(tbody.querySelectorAll('tr'));
+  var stype=th.getAttribute('data-sort');
+  var dir=th.getAttribute('data-dir');
+  var newDir=(dir==='desc')?'asc':'desc';
+  th.setAttribute('data-dir',newDir);
+  table.querySelectorAll('th[data-sort]').forEach(function(h){
+    if(h.getAttribute('data-sort')==='none')return;
+    var a=h.querySelector('.sort-arrow');
+    if(a)a.textContent='⇅';
+    if(h!==th)h.setAttribute('data-dir','none');
+  });
+  var arrow=th.querySelector('.sort-arrow');
+  if(arrow)arrow.textContent=(newDir==='desc')?'▼':'▲';
+  rows.sort(function(a,b){
+    var ca=a.querySelectorAll('td')[colIdx];
+    var cb=b.querySelectorAll('td')[colIdx];
+    var va=ca?ca.innerText.trim():'';
+    var vb=cb?cb.innerText.trim():'';
+    if(stype==='num'){
+      var na=parseFloat(va.replace(/[^0-9.-]/g,''))||0;
+      var nb=parseFloat(vb.replace(/[^0-9.-]/g,''))||0;
+      return(newDir==='desc')?nb-na:na-nb;
+    }
+    return(newDir==='desc')?vb.localeCompare(va,'zh'):va.localeCompare(vb,'zh');
+  });
+  rows.forEach(function(r){tbody.appendChild(r);});
+}
+</script>
+"""
+
 
 # ---------------------------------------------------------------------------
 # Heatmap selection state
@@ -729,49 +804,17 @@ if picked_year is not None and picked_month is not None:
                       </td>
                     </tr>""")
 
-                table_html = f"""
-                <style>
-                .month-games-table {{
-                    width: 100%;
-                    border-collapse: collapse;
-                    font-family: inherit;
-                }}
-                .month-games-table th {{
-                    background: #1e2a3a;
-                    color: #8ba3bc;
-                    font-size: 0.78rem;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    letter-spacing: 0.05em;
-                    padding: 8px 8px;
-                    text-align: left;
-                    border-bottom: 1px solid #2a3f55;
-                }}
-                .month-games-table td {{
-                    border-bottom: 1px solid #1e2a3a;
-                }}
-                .month-games-table tr:hover td {{
-                    background: #f3f5f7;
-                }}
-                </style>
-                <table class="month-games-table">
-                  <thead>
-                    <tr>
-                      <th style="width:76px;">縮圖</th>
-                      <th>名稱</th>
-                      <th style="width:260px;">評論等級 / 評論數</th>
-                      <th style="width:120px;">台幣售價</th>
-                      <th style="width:110px;">發售日</th>
-                      <th style="width:110px;">預測銷售</th>
-                      <th style="width:100px;">Steam</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {"".join(rows_html)}
-                  </tbody>
-                </table>
-                """
-                st.html(table_html)
+                table_html = _make_sortable_table(rows_html, "month-games-table", [
+                    ("縮圖",             "none"),
+                    ("名稱",             "text"),
+                    ("評論等級 / 評論數", "text"),
+                    ("台幣售價",          "num"),
+                    ("發售日",            "text"),
+                    ("預測銷售",          "num"),
+                    ("Steam",            "none"),
+                ])
+                _d_h = min(520, 80 + 56 * min(len(rows_html), 12))
+                _components.html(table_html, height=_d_h, scrolling=True)
             if st.button("關閉", key="close_hm_dialog", use_container_width=True):
                 st.session_state["hm_show_dialog"] = False
                 st.rerun()

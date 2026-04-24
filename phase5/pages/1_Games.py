@@ -2,6 +2,7 @@
 pages/1_Games.py — 遊戲清單（卡片 / 清單 雙模式）
 """
 import streamlit as st
+import streamlit.components.v1 as _components
 import pandas as pd
 
 from data import (
@@ -185,6 +186,111 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
 
 
 df = apply_filters(df_all)
+
+
+# ---------------------------------------------------------------------------
+# 共用：可排序 HTML 表格產生器（JS client-side sort，不改 td 樣式）
+# ---------------------------------------------------------------------------
+def _make_sortable_table(
+    rows_html: list[str],
+    table_id: str,
+    columns: list[tuple[str, str]],   # (標題, 排序類型: "none"|"text"|"num")
+) -> str:
+    """
+    回傳含 JS 排序邏輯的完整 HTML 字串。
+    排序類型 "num"：去除非數字字符後比較數值，第一次點為降序（大→小）。
+    排序類型 "text"：字串比較，第一次點為升序（A→Z），再點切換。
+    排序類型 "none"：無排序（縮圖欄）。
+    """
+    th_parts = []
+    for i, (label, stype) in enumerate(columns):
+        if stype == "none":
+            th_parts.append(f'<th data-sort="none">{label}</th>')
+        else:
+            th_parts.append(
+                f'<th data-sort="{stype}" data-col="{i}" data-dir="none" '
+                f'style="cursor:pointer;user-select:none;" '
+                f'onclick="sortTable(\'{table_id}\',{i},this)">'
+                f'{label} <span class="sort-arrow" style="opacity:0.5;font-size:0.7em;">⇅</span></th>'
+            )
+    thead_html = "<tr>" + "".join(th_parts) + "</tr>"
+
+    sort_js = """
+<script>
+function sortTable(tableId, colIdx, th) {
+  var table = document.getElementById(tableId);
+  var tbody = table.querySelector('tbody');
+  var rows  = Array.from(tbody.querySelectorAll('tr'));
+  var stype = th.getAttribute('data-sort');
+  var dir   = th.getAttribute('data-dir');
+  // first click on a col → desc (大→小); toggle after
+  var newDir = (dir === 'desc') ? 'asc' : 'desc';
+  th.setAttribute('data-dir', newDir);
+
+  // reset all arrows in this table
+  table.querySelectorAll('th[data-sort]').forEach(function(h) {
+    if (h.getAttribute('data-sort') === 'none') return;
+    var arr = h.querySelector('.sort-arrow');
+    if (arr) arr.textContent = '⇅';
+    if (h !== th) h.setAttribute('data-dir', 'none');
+  });
+  var arrow = th.querySelector('.sort-arrow');
+  if (arrow) arrow.textContent = (newDir === 'desc') ? '▼' : '▲';
+
+  rows.sort(function(a, b) {
+    var ca = a.querySelectorAll('td')[colIdx];
+    var cb = b.querySelectorAll('td')[colIdx];
+    var va = ca ? ca.innerText.trim() : '';
+    var vb = cb ? cb.innerText.trim() : '';
+    if (stype === 'num') {
+      var na = parseFloat(va.replace(/[^0-9.-]/g,'')) || 0;
+      var nb = parseFloat(vb.replace(/[^0-9.-]/g,'')) || 0;
+      return (newDir === 'desc') ? nb - na : na - nb;
+    } else {
+      return (newDir === 'desc') ? vb.localeCompare(va,'zh') : va.localeCompare(vb,'zh');
+    }
+  });
+  rows.forEach(function(r){ tbody.appendChild(r); });
+}
+</script>
+"""
+
+    return f"""
+<style>
+.{table_id} {{
+    width: 100%;
+    border-collapse: collapse;
+    font-family: inherit;
+}}
+.{table_id} th {{
+    background: #1e2a3a;
+    color: #8ba3bc;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 8px 8px;
+    text-align: left;
+    border-bottom: 1px solid #2a3f55;
+}}
+.{table_id} td {{
+    border-bottom: 1px solid #1e2a3a;
+}}
+.{table_id} tr:hover td {{
+    background: #1a2535;
+}}
+</style>
+{sort_js}
+<table class="{table_id}" id="{table_id}">
+  <thead>{thead_html}</thead>
+  <tbody>{"".join(rows_html)}</tbody>
+</table>
+"""
+
+
+def _render_sortable_table(html: str, height: int = 600) -> None:
+    _components.html(html, height=min(height, 900), scrolling=True)
+
 
 # ---------------------------------------------------------------------------
 # Header + 模式切換
@@ -406,7 +512,7 @@ else:
           </td>
           <td style="padding:6px 8px;vertical-align:middle;font-size:0.88rem;font-weight:600;max-width:220px;">
             <a href="{url}" target="_blank"
-               style="color:#c6d4df;text-decoration:none;"
+               style="color:#111111;text-decoration:none;"
                onmouseover="this.style.textDecoration='underline'"
                onmouseout="this.style.textDecoration='none'">{name}</a>
           </td>
@@ -420,49 +526,15 @@ else:
                      white-space:nowrap;">{sales}</td>
         </tr>""")
 
-    table_html = f"""
-    <style>
-    .game-list-table {{
-        width: 100%;
-        border-collapse: collapse;
-        font-family: inherit;
-    }}
-    .game-list-table th {{
-        background: #1e2a3a;
-        color: #8ba3bc;
-        font-size: 0.78rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        padding: 8px 8px;
-        text-align: left;
-        border-bottom: 1px solid #2a3f55;
-    }}
-    .game-list-table td {{
-        border-bottom: 1px solid #1e2a3a;
-    }}
-    .game-list-table tr:hover td {{
-        background: #1a2535;
-    }}
-    </style>
-    <table class="game-list-table">
-      <thead>
-        <tr>
-          <th>縮圖</th>
-          <th>名稱</th>
-          <th>評論等級 / 評論數</th>
-          <th>台幣售價</th>
-          <th>發售日</th>
-          <th>預測銷售</th>
-        </tr>
-      </thead>
-      <tbody>
-        {"".join(rows_html)}
-      </tbody>
-    </table>
-    """
-
-    st.html(table_html)
+    table_html = _make_sortable_table(rows_html, "game-list-table", [
+        ("縮圖",             "none"),
+        ("名稱",             "text"),
+        ("評論等級 / 評論數", "text"),
+        ("台幣售價",          "num"),
+        ("發售日",            "text"),
+        ("預測銷售",          "num"),
+    ])
+    _render_sortable_table(table_html, height=36 * len(rows_html) + 60)
 
 # ---------------------------------------------------------------------------
 # Pagination controls
