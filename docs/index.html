@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>Steam AO 市場分析</title>
+  <style>
+    :root {
+      --bg: #0e1117;
+      --card: #161b22;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --btn: #1f6feb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: "Segoe UI", system-ui, -apple-system, "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 42rem;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 2.5rem;
+    }
+    h1 { font-size: 1.35rem; font-weight: 600; margin: 0 0 0.5rem; }
+    p.lead { color: var(--muted); font-size: 0.95rem; margin: 0 0 1.5rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 1.25rem 1.1rem;
+    }
+    .actions { display: flex; flex-direction: column; gap: 0.75rem; }
+    a.btn {
+      display: block;
+      text-align: center;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    a.btn.primary { background: var(--btn); color: #fff; }
+    a.btn.primary:hover { filter: brightness(1.08); }
+    a.btn.ghost { border: 1px solid #444c56; color: var(--text); }
+    a.btn.ghost:hover { background: #21262d; }
+    details { margin-top: 1.25rem; }
+    details summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; }
+    .steps { color: var(--muted); font-size: 0.88rem; margin: 0.5rem 0 0; padding-left: 1.2rem; }
+    .steps li { margin: 0.35em 0; }
+    .note { font-size: 0.82rem; color: var(--muted); margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Steam AO 市場分析</h1>
+    <p class="lead">專案入口與儀表板捷徑（手機瀏覽器也可使用）。互動圖表由 Streamlit 提供，需透過雲端服務執行，無法在 GitHub Pages 上直接跑 Python。</p>
+    <div class="card">
+      <div class="actions">
+        <a class="btn primary" id="app-link" target="_blank" rel="noopener noreferrer" href="#streamlit">開啟線上儀表板（Streamlit）</a>
+        <a class="btn ghost" href="https://github.com/yodev168/SteamAO_PD">在 GitHub 上查看程式碼</a>
+      </div>
+      <p class="note" id="hint" hidden>按鈕尚未指定 Streamlit 網址。請在下方展開說明完成部署，並編輯本檔的 <code>STREAMLIT_APP_URL</code>。</p>
+    </div>
+    <details>
+      <summary>如何取得「線上儀表板」網址（Streamlit Community Cloud，免費）</summary>
+      <ol class="steps">
+        <li>到 <a href="https://share.streamlit.io/" target="_blank" rel="noopener noreferrer">share.streamlit.io</a> 用 GitHub 帳號登入。</li>
+        <li>New app → 選倉庫 <strong>yodev168/SteamAO_PD</strong>、Branch <strong>main</strong>、Main file <strong>phase5/app.py</strong> → Deploy。</li>
+        <li>部署成功後你會得到類似 <code>https://＊＊＊.streamlit.app</code> 的網址。複製到本專案 <code>docs/index.html</code> 裡的 <code>STREAMLIT_APP_URL</code>，再 push 一次，此按鈕就會一鍵開啟儀表板（含手機版）。</li>
+      </ol>
+    </details>
+  </div>
+  <script>
+    (function () {
+      // 部署到 Streamlit Cloud 後，把下方改為你的 app 網址（以 https 開頭）
+      const STREAMLIT_APP_URL = "https://YOUR-APP-NAME.streamlit.app";
+
+      var link = document.getElementById("app-link");
+      var hint = document.getElementById("hint");
+      var isPlaceholder = !STREAMLIT_APP_URL || /YOUR-APP-NAME/i.test(STREAMLIT_APP_URL) || !/^https?:\/\//.test(STREAMLIT_APP_URL);
+      if (isPlaceholder) {
+        link.setAttribute("href", "https://share.streamlit.io/");
+        if (hint) { hint.removeAttribute("hidden"); }
+      } else {
+        link.setAttribute("href", STREAMLIT_APP_URL);
+        if (hint) { hint.setAttribute("hidden", "hidden"); }
+      }
+    })();
+  </script>
+</body>
+</html>

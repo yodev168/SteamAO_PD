@@ -1,0 +1,14 @@
+# Used locally and on Streamlit Community Cloud
+[client]
+    toolbarMode = "minimal"
+    showErrorDetails = true
+
+[server]
+    headless = true
+
+[browser]
+    gatherUsageStats = false
+
+[theme]
+    base = "dark"
+    font = "sans serif"
