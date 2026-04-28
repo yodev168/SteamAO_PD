@@ -213,7 +213,27 @@ st.title("Steam AO 市場分析 Dashboard")
 st.markdown(
     f"目前篩選結果：**{len(df_filtered):,}** 款遊戲（共 {len(df_all):,} 款）"
 )
-st.info("請使用左側導覽選擇頁面：\n- **1 Games** — 遊戲清單\n- **2 Release Heatmap** — 發售熱度分析\n- **3 Reviews** — 評論分析\n- **4 Price Bands** — 價格區間分析")
+st.markdown(
+    """
+    <div style="background:#1a2a3a;border-radius:6px;padding:16px 20px;margin-bottom:8px;">
+        <span style="color:#5b9bd5;font-weight:600;">請使用左側導覽選擇頁面：</span>
+        <ul style="margin:8px 0 0 0;padding-left:20px;color:#5b9bd5;">
+            <li><b>1 Games</b> — 遊戲清單</li>
+            <li><b>2 Release Heatmap</b> — 發售熱度分析</li>
+            <li><b>3 Reviews</b> — 評論分析</li>
+            <li><b>4 Price Bands</b> — 價格區間分析</li>
+        </ul>
+    </div>
+    <div style="border:2px solid #e74c3c;border-radius:6px;padding:14px 20px;margin-bottom:16px;background:#2a1a1a;">
+        <div style="color:#e74c3c;font-weight:700;font-size:1rem;margin-bottom:8px;">⚠️ 尚未完成項目</div>
+        <ul style="margin:0;padding-left:20px;color:#f0a0a0;font-size:0.92rem;line-height:1.7;">
+            <li>遊戲資料尚未齊全，目前僅爬取部分遊戲作為測試</li>
+            <li>銷售套數僅供參考，待過往數據統計完成，即可獲得較精準的評論數換算銷售套數倍率</li>
+        </ul>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # Quick summary metrics
 c1, c2, c3, c4 = st.columns(4)
