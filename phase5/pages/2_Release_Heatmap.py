@@ -214,7 +214,7 @@ def _make_sortable_table(
     text-transform:uppercase;letter-spacing:0.05em;padding:8px;text-align:left;
     border-bottom:1px solid #2a3f55; }}
 #{table_id} td {{ border-bottom:1px solid #1e2a3a; }}
-#{table_id} tr:hover td {{ background:#f3f5f7; }}
+#{table_id} tr:hover td {{ background:#1a2535; }}
 </style>
 {_SORT_JS}
 <table id="{table_id}">
@@ -789,14 +789,14 @@ if picked_year is not None and picked_month is not None:
                         <a href="{url}" target="_blank">{img_tag}</a>
                       </td>
                       <td style="padding:6px 8px;vertical-align:middle;font-size:0.88rem;font-weight:600;line-height:1.4;word-break:break-word;">
-                        <a href="{url}" target="_blank" style="color:#111111;text-decoration:none;"
+                        <a href="{url}" target="_blank" style="color:#e8eaf0;text-decoration:none;"
                            onmouseover="this.style.textDecoration='underline'"
                            onmouseout="this.style.textDecoration='none'">{name}</a>
                       </td>
                       <td style="padding:6px 8px;vertical-align:middle;font-size:0.82rem;color:{r_color};font-weight:600;">{rating_text}</td>
-                      <td style="padding:6px 8px;vertical-align:middle;font-size:0.84rem;white-space:nowrap;">{price}</td>
+                      <td style="padding:6px 8px;vertical-align:middle;font-size:0.84rem;color:#e8eaf0;white-space:nowrap;">{price}</td>
                       <td style="padding:6px 8px;vertical-align:middle;font-size:0.82rem;color:#aaa;white-space:nowrap;">{date_s}</td>
-                      <td style="padding:6px 8px;vertical-align:middle;font-size:0.82rem;white-space:nowrap;">{sales}</td>
+                      <td style="padding:6px 8px;vertical-align:middle;font-size:0.82rem;color:#e8eaf0;white-space:nowrap;">{sales}</td>
                       <td style="padding:6px 8px;vertical-align:middle;white-space:nowrap;">
                         <a href="{url}" target="_blank"
                            style="display:inline-block;padding:4px 10px;background:#1b2838;color:#c6d4df;
