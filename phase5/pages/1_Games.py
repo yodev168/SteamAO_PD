@@ -512,18 +512,18 @@ else:
           </td>
           <td style="padding:6px 8px;vertical-align:middle;font-size:0.88rem;font-weight:600;max-width:220px;">
             <a href="{url}" target="_blank"
-               style="color:#111111;text-decoration:none;"
+               style="color:#e8eaf0;text-decoration:none;"
                onmouseover="this.style.textDecoration='underline'"
                onmouseout="this.style.textDecoration='none'">{name}</a>
           </td>
           <td style="padding:6px 8px;vertical-align:middle;font-size:0.82rem;
                      color:{r_color};font-weight:600;max-width:280px;">{r_text}</td>
           <td style="padding:6px 8px;vertical-align:middle;font-size:0.85rem;
-                     white-space:nowrap;">{price}</td>
+                     color:#e8eaf0;white-space:nowrap;">{price}</td>
           <td style="padding:6px 8px;vertical-align:middle;font-size:0.82rem;
                      color:#aaa;white-space:nowrap;">{date_s}</td>
           <td style="padding:6px 8px;vertical-align:middle;font-size:0.82rem;
-                     white-space:nowrap;">{sales}</td>
+                     color:#e8eaf0;white-space:nowrap;">{sales}</td>
         </tr>""")
 
     table_html = _make_sortable_table(rows_html, "game-list-table", [
